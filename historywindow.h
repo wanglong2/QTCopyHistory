@@ -11,7 +11,14 @@ class HistoryWindow : public QWidget {
 public:
     explicit HistoryWindow(ClipboardManager *manager, QWidget *parent = nullptr);
 
+    Q_CLASSINFO("D-Bus Interface", "io.github.QTCopyHistory")
+public slots:
     void showAtCursor();
+signals:
+    void pasteRequested();
+
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;

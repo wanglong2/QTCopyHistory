@@ -7,6 +7,8 @@
 #include <QAction>
 #include <QLocalServer>
 #include <QLocalSocket>
+#include <QDBusConnection>
+#include <QDebug>
 
 static const char *SERVER_NAME = "QTCopyHistory_Instance";
 
@@ -49,6 +51,12 @@ int main(int argc, char *argv[])
     manager.start();
 
     HistoryWindow historyWindow(&manager, nullptr);
+    auto bus = QDBusConnection::sessionBus();
+    if (!bus.registerService("io.github.QTCopyHistory") ||
+        !bus.registerObject("/io/github/QTCopyHistory", &historyWindow,
+                            QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals))
+        qWarning() << "Desktop integration unavailable: could not register D-Bus service";
+
 
     QLocalServer localServer;
     localServer.removeServer(SERVER_NAME);

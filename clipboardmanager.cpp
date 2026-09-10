@@ -1,6 +1,7 @@
 #include "clipboardmanager.h"
 #include <QApplication>
 #include <QMimeData>
+#include <QSignalBlocker>
 
 ClipboardManager::ClipboardManager(QObject *parent)
     : QObject(parent)
@@ -80,9 +81,9 @@ void ClipboardManager::copyToClipboard(int index)
 {
     if (index < 0 || index >= m_history.size()) return;
 
-    const ClipboardItem &item = m_history.at(index);
-    auto guard = m_clipboard->mimeData();
-    Q_UNUSED(guard);
+    // Clipboard updates can synchronously emit dataChanged and reorder history.
+    const ClipboardItem item = m_history.at(index);
+    const QSignalBlocker blocker(m_clipboard);
 
     if (item.type == ClipType::Text) {
         m_clipboard->setText(item.text);

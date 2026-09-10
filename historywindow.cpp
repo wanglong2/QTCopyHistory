@@ -18,7 +18,7 @@ HistoryWindow::HistoryWindow(ClipboardManager *manager, QWidget *parent)
 {
     setWindowTitle("Clipboard History");
     setObjectName("HistoryWindow");
-    setMinimumSize(400, 300);
+    setMinimumSize(1, 1);
     resize(480, 420);
     setAttribute(Qt::WA_TranslucentBackground);
 
@@ -41,6 +41,7 @@ HistoryWindow::HistoryWindow(ClipboardManager *manager, QWidget *parent)
 
     m_list = new QListWidget(card);
     m_list->setObjectName("HistoryList");
+    m_list->installEventFilter(this);
     m_list->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_list->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     m_list->setFocusPolicy(Qt::StrongFocus);
@@ -107,6 +108,7 @@ HistoryWindow::HistoryWindow(ClipboardManager *manager, QWidget *parent)
         "}"
     );
     m_preview->setWordWrap(true);
+    m_preview->setTextFormat(Qt::PlainText);
 
     cardLayout->addWidget(m_list, 1);
     cardLayout->addWidget(m_preview);
@@ -151,17 +153,21 @@ void HistoryWindow::showAtCursor()
     QScreen *screen = QApplication::screenAt(cursorPos);
     if (!screen) screen = QApplication::primaryScreen();
 
-    QRect screenRect = screen->availableGeometry();
-    int x = cursorPos.x() - width() / 2;
-    int y = cursorPos.y() - height() - 10;
-
-    if (x < screenRect.left()) x = screenRect.left() + 4;
-    if (x + width() > screenRect.right()) x = screenRect.right() - width() - 4;
-    if (y < screenRect.top()) y = cursorPos.y() + 20;
+    if (!screen) return;
+    const QRect screenRect = screen->availableGeometry().adjusted(4, 4, -4, -4);
+    resize(qMin(480, screenRect.width()), qMin(420, screenRect.height()));
+    m_preview->setVisible(width() >= 400);
+    int x = cursorPos.x();
+    int y = cursorPos.y() + 12;
+    if (y + height() > screenRect.y() + screenRect.height())
+        y = cursorPos.y() - height() - 12;
+    x = qBound(screenRect.left(), x, screenRect.x() + screenRect.width() - width());
+    y = qBound(screenRect.top(), y, screenRect.y() + screenRect.height() - height());
 
     move(x, y);
     updateMask();
     show();
+    raise();
     activateWindow();
     m_list->setFocus();
 
@@ -193,11 +199,28 @@ void HistoryWindow::refreshList()
     }
 
     m_list->blockSignals(false);
+    m_preview->clear();
 
     if (currentRow >= 0 && currentRow < m_list->count())
         m_list->setCurrentRow(currentRow);
     else if (m_list->count() > 0)
         m_list->setCurrentRow(0);
+}
+
+bool HistoryWindow::eventFilter(QObject *watched, QEvent *event)
+{
+    if (watched == m_list && event->type() == QEvent::KeyPress) {
+        auto *key = static_cast<QKeyEvent *>(event);
+        switch (key->key()) {
+        case Qt::Key_Return: case Qt::Key_Enter: case Qt::Key_Delete:
+        case Qt::Key_Escape: case Qt::Key_Up: case Qt::Key_Down:
+        case Qt::Key_Left: case Qt::Key_Right:
+            keyPressEvent(key);
+            return true;
+        default: break;
+        }
+    }
+    return QWidget::eventFilter(watched, event);
 }
 
 void HistoryWindow::keyPressEvent(QKeyEvent *event)
@@ -223,13 +246,14 @@ void HistoryWindow::keyPressEvent(QKeyEvent *event)
         return;
     }
 
-    if (event->key() == Qt::Key_Down && m_list->currentRow() == m_list->count() - 1) {
-        m_list->setCurrentRow(0);
-        return;
-    }
-
-    if (event->key() == Qt::Key_Up && m_list->currentRow() == 0) {
-        m_list->setCurrentRow(m_list->count() - 1);
+    if (event->key() == Qt::Key_Down || event->key() == Qt::Key_Up ||
+        event->key() == Qt::Key_Left || event->key() == Qt::Key_Right) {
+        const int count = m_list->count();
+        if (count > 0) {
+            const int step = (event->key() == Qt::Key_Down || event->key() == Qt::Key_Right) ? 1 : -1;
+            m_list->setCurrentRow((m_list->currentRow() + step + count) % count);
+            m_list->scrollToItem(m_list->currentItem());
+        }
         return;
     }
 
@@ -259,6 +283,8 @@ void HistoryWindow::updateMask()
 
 void HistoryWindow::onItemClicked(int index)
 {
+    if (index < 0 || index >= m_manager->history().size()) return;
     m_manager->copyToClipboard(index);
     hide();
+    emit pasteRequested();
 }
