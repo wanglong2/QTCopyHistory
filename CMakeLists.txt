@@ -1,11 +1,11 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 project(QTCopyHistory)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 
-
+SET(CMAKE_PREFIX_PATH "/home/wanglong/Qt/6.11.0/gcc_64")
 
 find_package(Qt6 COMPONENTS
         Core

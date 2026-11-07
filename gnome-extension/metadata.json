@@ -1,0 +1,7 @@
+{
+  "uuid": "qtcopyhistory@local",
+  "name": "Qt Copy History",
+  "description": "Win+V, popup positioning and paste-back for QTCopyHistory",
+  "shell-version": ["50"],
+  "settings-schema": "org.gnome.shell.extensions.qtcopyhistory"
+}

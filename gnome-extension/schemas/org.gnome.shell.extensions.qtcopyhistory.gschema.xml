@@ -1,0 +1,5 @@
+<schemalist>
+  <schema id="org.gnome.shell.extensions.qtcopyhistory" path="/org/gnome/shell/extensions/qtcopyhistory/">
+    <key name="show-history" type="as"><default>['&lt;Super&gt;v']</default></key>
+  </schema>
+</schemalist>
